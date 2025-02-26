@@ -9,6 +9,8 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, 51 Franklin Street, Suite 500 Boston, MA 02110-1335 USA
 
+const { default: i18next } = require("i18next");
+
 /*
    globals
 
@@ -58,11 +60,9 @@ const changeImage = (imgElement, from, to) => {
 };
 
 /**
- * Enhanced _() method to handle case variations for translations
- * prioritize exact matches and preserve the case of the input text.
- * @function
- * @param {string} text - The input text to be translated.
- * @returns {string} The translated text.
+ * Translates text using i18next, handling special characters and case sensitivity.
+ * @param {string} text - The text to translate.
+ * @returns {string} The translated text, or the original text if no translation is found.
  */
 function _(text) {
     if (text === null || text === undefined) {
@@ -72,7 +72,7 @@ function _(text) {
 
     try {
         // Replace certain characters from the input text
-        const replace = [
+        const specialChars  = [
             ",",
             "(",
             ")",
@@ -97,41 +97,36 @@ function _(text) {
         let replaced = text;
 
         // to remove unwanted characters
-        for (let p = 0; p < replace.length; p++) {
-            replaced = replaced.split(replace[p]).join(""); // Efficient replacement
-        }
+        replaced = Array.from(text).filter(char => !specialChars.includes(char)).join("");
         
         //the replaced version is the version WITHOUT the unwanted characters.
         replaced = replaced.replace(/ /g, "-");
 
         if (localStorage.kanaPreference === "kana") {
-            const lang = document.webL10n.getLanguage();
+            const lang = i18next.language;
             if (lang === "ja") {
                 replaced = "kana-" + replaced;
             }
         }
 
-        // first, we actually tried to find out if there was an existing translation with SAME case
-        let translated = document.webL10n.get(text);
+        // Try to translate the original text
+        let translated = i18next.t(text) ?? text; // if the translation is missing the original text is used 
 
-        // Takes, for example
-        if ((!translated || translated === text) && replaced !== text) {
-            translated = document.webL10n.get(replaced);
+        // If no translation is found, try the replaced version (without special characters)
+        if (translated === text && replaced !== text) {
+            translated = i18next.t(replaced) ?? text;
         }
 
         // If still no translation is found, try the lowercase version
-        if (!translated || translated === text) {
-            translated = document.webL10n.get(text.toLowerCase());
+        if (translated === text) {
+            translated = i18next.t(text.toLowerCase()) ?? text;
         }
 
         //if still no translation is found, try the initial caps translation too
-        if (!translated || translated === text) {
+        if (translated === text) {
             const initialCaps = text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
-            translated = document.webL10n.get(initialCaps);
+            translated = i18next.t(initialCaps) ?? text;
         }
-
-        //function returns the ORIGINAL case without any translation if no translation exists
-        translated = translated || text;
 
         // this if ensures Correct LETTER CASING, for example, "Search" -> "Buscar" and "SEARCH" -> "BUSCAR" and "search" -> "buscar"
         if (text === text.toUpperCase()) {
@@ -161,18 +156,23 @@ function _(text) {
  * @returns {string} The formatted string.
  */
 let format = (str, data) => {
+    // Replace placeholders in the format `{key}` with values from the data object
     str = str.replace(/{([a-zA-Z0-9.]*)}/g, (match, name) => {
-        let x = data;
-        name.split(".").forEach((v) => {
-            if (x === undefined) {
-                // eslint-disable-next-line no-console
-                console.debug("Undefined value in template string", str, name, x, v);
-            }
 
-            x = x[v];
+        let value = data;
+
+        // Split the placeholder name by dots (e.g., "user.name") and traverse the data object
+        name.split(".").forEach((key) => {
+            if (value === undefined) {
+                // eslint-disable-next-line no-console
+                console.debug("Undefined value in template string", str, name, value, key);
+            }
+            // Traverse the data object to get the nested value
+            value = value?.[key];
         });
 
-        return x;
+        // Return the resolved value or the original placeholder if the value is undefined
+        return value ??  match ;
     });
 
     return str.replace(/{_([a-zA-Z0-9]+)}/g, (match, item) => {
