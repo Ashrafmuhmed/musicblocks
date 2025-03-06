@@ -69,11 +69,12 @@ class Singer {
         this.turtle = turtle;
         this.turtles = turtle.turtles;
 
-        // Parameters used by envelope block
-        /** @deprecated */ this.attack = [];
-        /** @deprecated */ this.decay = [];
-        /** @deprecated */ this.sustain = [];
-        /** @deprecated */ this.release = [];
+        this.envelope = {
+            attack: 0.1,  // Default attack time (in seconds)
+            decay: 0.1,   // Default decay time (in seconds)
+            sustain: 0.5, // Default sustain level (0 to 1)
+            release: 0.1  // Default release time (in seconds)
+        };
 
         // Parameters used by pitch
         this.scalarTransposition = 0;
@@ -258,6 +259,20 @@ class Singer {
                 tur.singer.pushedNote = true;
             }
         }
+    }
+
+    /**
+     * Updates the envelope settings.
+     * @param {number} attack - New attack time.
+     * @param {number} decay - New decay time.
+     * @param {number} sustain - New sustain level.
+     * @param {number} release - New release time.
+     */
+    updateEnvelope(attack, decay, sustain, release) {
+        this.envelope.attack = attack;
+        this.envelope.decay = decay;
+        this.envelope.sustain = sustain;
+        this.envelope.release = release;
     }
 
     // ========= Utilities ====================================================

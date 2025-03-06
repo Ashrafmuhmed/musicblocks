@@ -190,10 +190,12 @@ class Turtle {
         this.painter.cp2x = 100;
         this.painter.cp2y = 100;
 
-        /** @deprecated */ this.singer.attack = [];
-        /** @deprecated */ this.singer.decay = [];
-        /** @deprecated */ this.singer.sustain = [];
-        /** @deprecated */ this.singer.release = [];
+        this.singer.envelope = {
+            attack: 0.1,
+            decay: 0.1,
+            sustain: 0.5,
+            release: 0.1
+        };
 
         this.singer.scalarTransposition = 0;
         this.singer.scalarTranspositionValues = [];
