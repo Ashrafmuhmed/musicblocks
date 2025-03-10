@@ -3230,6 +3230,11 @@ class Blocks {
 
             let postProcessArg = null;
             let thisBlock = this.blockList.length;
+
+            let videoElement = null ; 
+            let webcamStream = null ; 
+            let closeButton = null ;
+            let isDrawing = null ; 
             if (name === "start") {
                 postProcess = (thisBlock) => {
                     that.blockList[thisBlock].value = that.turtles.getTurtleCount();
@@ -3358,12 +3363,112 @@ class Blocks {
                 postProcess = (args) => {
                     const b = args[0];
                     const v = args[1];
-                    that.blockList[b].value = CAMERAVALUE;
-                    if (v == null) {
-                        that.blockList[b].image = "images/camera.svg";
-                    } else {
-                        that.blockList[b].image = null;
+
+                    if(!videoElement){
+                        videoElement = document.createElement("video");
+                        videoElement.id = "webcamVideo" ;
+                        videoElement.style.display = "none";
+                        document.body.appendChild(videoElement);
+                        videoElement.style.borderRadius = "5px";
+                        videoElement.style.border = "1px solid black";
                     }
+
+                    navigator.mediaDevices.getUserMedia({video : true}).then((stream) => {
+                        webcamStream = stream ; 
+                        videoElement.srcObject = stream;
+                        videoElement.play();
+
+                        const canvas = document.getElementById("myCanvas");
+                        const context = canvas.getContext("2d");
+
+                        const videoWidth = 320 ; 
+                        const videoHeight = 240 ;
+                        const xPos = 0 ;
+                        const yPos = canvas.height - videoHeight;
+
+                        if(!closeButton){
+                            closeButton = document.createElement("button");
+                            closeButton.innerHTML = "X";
+                            closeButton.style.position = "absolute";
+                            closeButton.style.zIndex = "3"; 
+                            document.body.appendChild(closeButton);
+                        }
+
+                        closeButton.style.left = `${canvas.offsetLeft + xPos + videoWidth - 30}px`; 
+                        closeButton.style.top = `${canvas.offsetTop + yPos}px`;
+                        closeButton.style.width = "20px";
+                        closeButton.style.height = "20px";
+                        closeButton.style.backgroundColor = "red";
+                        closeButton.style.color = "white";
+                        closeButton.style.border = "none";
+                        closeButton.style.borderRadius = "50%"; 
+                        closeButton.style.fontWeight = "bold";
+                        closeButton.style.backgroundColor = "#ff4444"; 
+                        closeButton.style.boxShadow = "0 2px 4px rgba(0,0,0,0.3)"; 
+
+
+                        closeButton.onclick = () => {
+                            if(webcamStream){
+                                webcamStream.getTracks().forEach(track => track.stop());
+                                videoElement.srcObject = null;
+                                isDrawing = false;
+                                closeButton.style.display = "none"; 
+                                context.clearRect(xPos, yPos, videoWidth, videoHeight);
+                                that.blockList[b].value = "Webcam Stopped";
+                            }};
+
+                            isDrawing = true ; 
+
+                        function drawVideo() {
+                            if (isDrawing) {
+                                context.save();
+                        
+                                const videoWidth = 320;
+                                const videoHeight = 240;
+                                const xPos = 0;
+                                const yPos = canvas.height - videoHeight;
+                                const radius = 20; 
+                        
+                                context.beginPath();
+                                context.moveTo(xPos + radius, yPos);
+                                context.arcTo(xPos + videoWidth, yPos, xPos + videoWidth, yPos + videoHeight, radius);
+                                context.arcTo(xPos + videoWidth, yPos + videoHeight, xPos, yPos + videoHeight, radius);
+                                context.arcTo(xPos, yPos + videoHeight, xPos, yPos, radius);
+                                context.arcTo(xPos, yPos, xPos + videoWidth, yPos, radius);
+                                context.closePath();
+                        
+                                context.clip();
+                        
+                                context.drawImage(videoElement, xPos, yPos, videoWidth, videoHeight);
+                        
+                                context.restore();
+                        
+                                requestAnimationFrame(drawVideo);
+                            }
+                        }
+
+                        function getPixelColor(x, y) {
+                            const turtle = that.turtles.turtleList[0];
+                            const xX = turtle.x ; 
+                            const yY = turtle.y ;
+                            const pixelData = context.getImageData(x, y, 1, 1).data;
+                            const color = `rgb(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]})`;
+                            console.log("Pixel at", x, y, "is", color);
+                        }
+
+                        drawVideo();
+                        getPixelColor(15, 66);
+
+                        that.blockList[b].value = "Webcam Active";
+                        that.blockList[b].image = "images/camera.svg";
+                    }).catch((err) => {
+                        console.error("Webcam Error: " + err);
+                        that.blockList[b].value = "Webcam Error";
+                        that.blockList[b].image = "images/camera.svg";
+                        alert("Webcam Error: " + err);
+                    })
+
+                    
                 };
 
                 postProcessArg = [thisBlock, null];
